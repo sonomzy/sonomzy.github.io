@@ -23,7 +23,7 @@ email: sonomzy@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   My personal site fully built because I found myself testing out Jekyll while trying to understand Shopify Liquid!. Let's see how far this takes me!
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
+url: "sonomzy.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: sonomzy
 #github_username:  sonomzy
 
