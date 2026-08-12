@@ -1,0 +1,11 @@
+name = "sonomzy-publisher"
+main = "src/index.js"
+compatibility_date = "2026-08-12"
+workers_dev = true
+
+[vars]
+ALLOWED_ORIGIN = "https://sonomzy.github.io"
+ADMIN_URL = "https://sonomzy.github.io/admin/"
+GITHUB_OWNER = "sonomzy"
+GITHUB_REPO = "sonomzy.github.io"
+ALLOWED_GITHUB_ID = "22891072"
