@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Sonomzy Site Settings</title>
+  <link rel="stylesheet" href="./settings.css">
+</head>
+<body>
+  <section id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <a href="/" class="brand">Sonomzy</a>
+      <h1>Site settings</h1>
+      <p id="authMessage">Sign in to edit the public site.</p>
+      <button id="loginButton" type="button">Sign in with GitHub</button>
+    </div>
+  </section>
+
+  <div id="settingsApp" hidden>
+    <header class="topbar">
+      <a href="/admin/" class="brand">← Writer</a>
+      <div class="top-actions">
+        <a href="/" target="_blank">View site</a>
+        <button id="logoutButton" type="button" class="ghost">Sign out</button>
+        <button id="saveButton" type="button">Save changes</button>
+      </div>
+    </header>
+
+    <main class="settings-wrap">
+      <aside class="settings-nav">
+        <button class="tab active" data-tab="design">Site design</button>
+        <button class="tab" data-tab="navigation">Navigation</button>
+      </aside>
+
+      <section class="settings-main">
+        <div id="designPanel" class="panel active">
+          <p class="eyebrow">Appearance</p>
+          <h1>Site design</h1>
+          <p class="lead">Change the main look of Sonomzy without editing CSS.</p>
+
+          <div class="form-grid">
+            <label><span>Site name</span><input id="siteName" type="text"></label>
+            <label><span>Tagline</span><input id="tagline" type="text"></label>
+          </div>
+
+          <h2>Colors</h2>
+          <div class="color-grid">
+            <label><span>Background</span><input id="background" type="color"></label>
+            <label><span>Surface</span><input id="surface" type="color"></label>
+            <label><span>Text</span><input id="text" type="color"></label>
+            <label><span>Muted text</span><input id="muted" type="color"></label>
+            <label><span>Accent</span><input id="accent" type="color"></label>
+            <label><span>Border</span><input id="border" type="color"></label>
+          </div>
+
+          <h2>Layout</h2>
+          <div class="form-grid three">
+            <label><span>Site width</span><input id="contentWidth" type="number" min="800" max="1600"></label>
+            <label><span>Article width</span><input id="articleWidth" type="number" min="560" max="1100"></label>
+            <label><span>Card radius</span><input id="radius" type="number" min="0" max="40"></label>
+          </div>
+        </div>
+
+        <div id="navigationPanel" class="panel">
+          <p class="eyebrow">Header</p>
+          <h1>Navigation</h1>
+          <p class="lead">Rename, reorder, add, or remove menu links.</p>
+          <div id="navRows" class="nav-rows"></div>
+          <button id="addNav" type="button" class="secondary">+ Add menu item</button>
+        </div>
+
+        <p id="status" class="status"></p>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./settings.js"></script>
+</body>
+</html>
