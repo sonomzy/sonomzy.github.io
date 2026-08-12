@@ -1,0 +1,29 @@
+<header class="sonomzy-header">
+  <div class="wrapper sonomzy-header-inner">
+    <a class="sonomzy-brand" href="{{ '/' | relative_url }}">{{ site.data.site.site_name | default: site.title }}</a>
+
+    <button class="sonomzy-menu-toggle" type="button" aria-expanded="false" aria-controls="sonomzy-menu" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav id="sonomzy-menu" class="sonomzy-menu" aria-label="Primary navigation">
+      {% for item in site.data.navigation %}
+        <a href="{{ item.url | relative_url }}"{% if page.url == item.url %} class="active"{% endif %}>{{ item.title }}</a>
+      {% endfor %}
+      <a class="sonomzy-github-link" href="https://github.com/sonomzy" rel="me">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<script>
+(() => {
+  const button = document.querySelector('.sonomzy-menu-toggle');
+  const menu = document.querySelector('#sonomzy-menu');
+  if (!button || !menu) return;
+  button.addEventListener('click', () => {
+    const open = button.getAttribute('aria-expanded') === 'true';
+    button.setAttribute('aria-expanded', String(!open));
+    menu.classList.toggle('open', !open);
+  });
+})();
+</script>
