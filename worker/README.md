@@ -33,19 +33,33 @@ Use:
 
 After registering it, copy the **Client ID** and generate a **Client secret**.
 
-## 3. Add Worker secrets
+The OAuth app is used only to prove which GitHub account signed in. The Worker requests only `read:user` and uses PKCE + state verification.
+
+## 3. Create a restricted GitHub write token
+
+Create a **fine-grained personal access token** under your GitHub account.
+
+Restrict it to:
+
+- Repository access: **Only select repositories** → `sonomzy.github.io`
+- Repository permissions → **Contents: Read and write**
+
+No other repository permission is needed for normal post/image publishing.
+
+## 4. Add Worker secrets
 
 In the Cloudflare Worker settings, add these as encrypted secrets:
 
 - `GITHUB_CLIENT_ID` — OAuth App Client ID
 - `GITHUB_CLIENT_SECRET` — OAuth App Client secret
-- `SESSION_SECRET` — a long random secret (at least 32 random bytes/characters; 64+ characters is recommended)
+- `GITHUB_WRITE_TOKEN` — the fine-grained token restricted to `sonomzy.github.io`
+- `SESSION_SECRET` — a long random secret; 64+ random characters is recommended
 
-Do not put any of these values into the repository.
+Do not put any of these values into the repository or `admin/config.js`.
 
-The non-secret configuration is already in `wrangler.toml` and restricts access to GitHub account ID `22891072` and repository `sonomzy/sonomzy.github.io`.
+The non-secret configuration in `wrangler.toml` restricts access to GitHub account ID `22891072` and repository `sonomzy/sonomzy.github.io`.
 
-## 4. Point the writer at the Worker
+## 5. Point the writer at the Worker
 
 Update `admin/config.js`:
 
@@ -53,7 +67,7 @@ Update `admin/config.js`:
 export const API_BASE = 'https://sonomzy-publisher.<your-workers-subdomain>.workers.dev';
 ```
 
-After the site redeploys, `/admin/` will show GitHub sign-in. Only the GitHub account with numeric ID `22891072` can obtain a valid writer session.
+After the site redeploys, `/admin/` shows GitHub sign-in. Only the GitHub account with numeric ID `22891072` can obtain a valid writer session.
 
 ## What Publish does
 
@@ -71,8 +85,10 @@ through `POST /api/upload`.
 
 ## Security notes
 
-- GitHub client secrets never enter the public site.
-- GitHub OAuth access tokens stay inside an AES-GCM encrypted, short-lived writer session.
-- Sessions expire after 12 hours and are held in browser `sessionStorage`, so closing the browser session removes them locally.
-- The Worker verifies the GitHub numeric user ID on login and again when decoding the session.
+- GitHub client secrets and the write token never enter the public site.
+- The OAuth token used to identify you is discarded after GitHub identity verification.
+- The browser receives only an AES-GCM encrypted, short-lived writer session containing your GitHub ID/login, not a GitHub access token.
+- Sessions expire after 12 hours and are held in browser `sessionStorage`.
+- The Worker verifies the GitHub numeric user ID on login and on every authenticated API request.
+- Publishing uses a separate fine-grained token limited to this one repository.
 - API requests are restricted to `https://sonomzy.github.io` by CORS and origin validation.
