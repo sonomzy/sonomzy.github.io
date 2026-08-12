@@ -4,15 +4,10 @@ title: About
 permalink: /about/
 ---
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
+Hi, I'm Onome.
 
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
+I'm a developer, blogger and digital creative. Sonomzy is my personal corner of the internet for the things I build, problems I solve, experiments I try and whatever I happen to be learning.
 
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
+You will probably find WordPress notes, development fixes, small tools, build logs and the occasional personal post here.
 
-
-[jekyll-organization]: https://github.com/jekyll
+I also run [Blogtrovert](https://blogtrovert.com) and build digital products at [Chicpixies](https://chicpixies.com).
