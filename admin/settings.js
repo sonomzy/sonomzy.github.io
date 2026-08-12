@@ -24,19 +24,18 @@ async function boot() {
     settingsApp.hidden = false;
   } catch (error) {
     sessionStorage.removeItem(SESSION_KEY);
-    showLogin('Your session expired. Sign in again.');
+    showLogin('Your session expired. Sign in again from the writer.');
   }
 }
 
-function showLogin(message = 'Sign in to edit the public site.') {
+function showLogin(message = 'Sign in from the writer, then come back here to edit the public site.') {
   authGate.hidden = false;
   settingsApp.hidden = true;
   authMessage.textContent = message;
 }
 
 loginButton.addEventListener('click', () => {
-  sessionStorage.setItem('sonomzy-auth-return', '/admin/settings.html');
-  location.href = `${API_BASE}/auth/github?return=settings`;
+  location.href = '/admin/';
 });
 
 logoutButton.addEventListener('click', () => {
