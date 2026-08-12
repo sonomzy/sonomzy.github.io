@@ -11,7 +11,7 @@ content:
     path: _posts
     format: yaml-frontmatter
     filename:
-      template: "{year}-{month}-{day}-{title}.md"
+      template: "{year}-{month}-{day}-{title}.html"
       field: false
     fields:
       - name: layout
