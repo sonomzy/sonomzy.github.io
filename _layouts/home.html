@@ -1,0 +1,68 @@
+---
+layout: default
+---
+
+<div class="home-page">
+  <section class="hero">
+    <p class="eyebrow">Onome Joseph • Sonomzy</p>
+    <h1>Developer, blogger, and digital creative.</h1>
+    <p class="hero-copy">This is my corner of the internet for build logs, development notes, experiments, and the things I’m figuring out as I go.</p>
+    <div class="hero-actions">
+      <a class="button primary" href="{{ '/archive/' | relative_url }}">Read posts</a>
+      <a class="button" href="{{ '/about/' | relative_url }}">About me</a>
+      <a class="button" href="https://github.com/sonomzy">GitHub</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>Latest posts</h2>
+      <a class="inline-link" href="{{ '/archive/' | relative_url }}">View archive</a>
+    </div>
+
+    {% if site.posts.size > 0 %}
+      <div class="post-grid">
+        {% for post in site.posts limit: 6 %}
+          <article class="post-card">
+            <p class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</p>
+            <h3><a href="{{ post.url | relative_url }}">{{ post.title | escape }}</a></h3>
+            <p>{% if post.description %}{{ post.description }}{% else %}{{ post.excerpt | strip_html | truncate: 130 }}{% endif %}</p>
+            <a class="inline-link" href="{{ post.url | relative_url }}">Read post</a>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="home-empty">No posts yet. Publish your first one from Pages CMS and it will show up here.</p>
+    {% endif %}
+  </section>
+
+  <section class="info-grid">
+    <article class="info-card">
+      <p class="card-kicker">What I make</p>
+      <h2>Tools and products</h2>
+      <p>I build WordPress plugins, themes, and small web tools. Some of them live at Chicpixies.</p>
+    </article>
+
+    <article class="info-card">
+      <p class="card-kicker">What I write about</p>
+      <h2>Notes that are actually useful</h2>
+      <p>Expect practical posts on WordPress, code, publishing, experiments, and whatever I’m learning at the moment.</p>
+    </article>
+
+    <article class="info-card">
+      <p class="card-kicker">Elsewhere</p>
+      <h2>Other corners</h2>
+      <ul>
+        <li><a href="https://blogtrovert.com">Blogtrovert</a></li>
+        <li><a href="https://www.chicpixies.com">Chicpixies</a></li>
+        <li><a href="https://github.com/sonomzy">GitHub profile</a></li>
+      </ul>
+    </article>
+  </section>
+
+  {% unless content == '' %}
+    <section class="section">
+      <div class="prose-card">{{ content }}</div>
+    </section>
+  {% endunless %}
+</div>
