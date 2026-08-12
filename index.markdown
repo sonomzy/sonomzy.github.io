@@ -1,6 +1,12 @@
 ---
-# Feel free to add content and custom Front Matter to this file.
-# To modify the layout, see https://jekyllrb.com/docs/themes/#overriding-theme-defaults
-
 layout: home
+title: Home
 ---
+
+## What you’ll find here
+
+This is where I document what I’m building, what I’m fixing, and what I’m learning.
+
+- WordPress and frontend development notes
+- build logs and small product updates
+- experiments, tools, and ideas worth keeping

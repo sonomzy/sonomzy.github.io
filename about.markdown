@@ -4,10 +4,10 @@ title: About
 permalink: /about/
 ---
 
-Hi, I'm Onome.
+Hi, I’m Onome.
 
-I'm a developer, blogger and digital creative. Sonomzy is my personal corner of the internet for the things I build, problems I solve, experiments I try and whatever I happen to be learning.
+I’m a developer, blogger, and digital creative. I build WordPress themes and plugins, experiment with small web tools, and spend a lot of time figuring out better ways to create and publish online.
 
-You will probably find WordPress notes, development fixes, small tools, build logs and the occasional personal post here.
+Sonomzy is where I keep the side of my work that feels more personal. It’s for development notes, experiments, build logs, and the random useful things I learn along the way.
 
-I also run [Blogtrovert](https://blogtrovert.com) and build digital products at [Chicpixies](https://chicpixies.com).
+If you want the more content-focused side of my work, visit [Blogtrovert](https://blogtrovert.com). If you want products and tools, visit [Chicpixies](https://www.chicpixies.com).
