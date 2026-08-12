@@ -14,8 +14,10 @@ export default {
       if (url.pathname === '/auth/github') return startGithubAuth(request, env);
       if (url.pathname === '/auth/callback') return finishGithubAuth(request, env);
       if (url.pathname === '/api/me') return requireSession(request, env, (session) => json({ authenticated: true, login: session.login, id: session.id }, 200, env, origin));
-      if (url.pathname === '/api/publish' && request.method === 'POST') return requireSession(request, env, (session) => publishPost(request, env, origin, session));
-      if (url.pathname === '/api/upload' && request.method === 'POST') return requireSession(request, env, (session) => uploadImage(request, env, origin, session));
+      if (url.pathname === '/api/publish' && request.method === 'POST') return requireSession(request, env, () => publishPost(request, env, origin));
+      if (url.pathname === '/api/upload' && request.method === 'POST') return requireSession(request, env, () => uploadImage(request, env, origin));
+      if (url.pathname === '/api/site-settings' && request.method === 'GET') return requireSession(request, env, () => getSiteSettings(env, origin));
+      if (url.pathname === '/api/site-settings' && request.method === 'POST') return requireSession(request, env, () => saveSiteSettings(request, env, origin));
       if (url.pathname === '/health') return json({ ok: true }, 200, env, origin);
       return json({ error: 'Not found' }, 404, env, origin);
     } catch (error) {
@@ -202,6 +204,93 @@ async function uploadImage(request, env, origin) {
   return json({ ok: true, path, url: `/${path}` }, 200, env, origin);
 }
 
+async function getSiteSettings(env, origin) {
+  assertPublishSecret(env);
+  const [siteFile, navigationFile] = await Promise.all([
+    readJsonFile('_data/site.json', env),
+    readJsonFile('_data/navigation.json', env),
+  ]);
+  return json({ site: siteFile.data, navigation: navigationFile.data }, 200, env, origin);
+}
+
+async function saveSiteSettings(request, env, origin) {
+  assertPublishSecret(env);
+  const body = await request.json();
+  const site = sanitiseSiteSettings(body.site || {});
+  const navigation = sanitiseNavigation(body.navigation || []);
+  if (!navigation.length) return json({ error: 'Keep at least one navigation item.' }, 400, env, origin);
+
+  const siteResult = await writeJsonFile('_data/site.json', site, 'Update site design', env);
+  if (!siteResult.ok) return json({ error: siteResult.error }, siteResult.status, env, origin);
+
+  const navResult = await writeJsonFile('_data/navigation.json', navigation, 'Update site navigation', env);
+  if (!navResult.ok) return json({ error: navResult.error }, navResult.status, env, origin);
+
+  return json({ ok: true }, 200, env, origin);
+}
+
+async function readJsonFile(path, env) {
+  const response = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}?ref=main`, env.GITHUB_WRITE_TOKEN);
+  if (!response.ok) throw new Error((await safeGithubError(response)) || `Could not read ${path}`);
+  const file = await response.json();
+  const text = base64ToUtf8(String(file.content || '').replace(/\n/g, ''));
+  return { data: JSON.parse(text), sha: file.sha };
+}
+
+async function writeJsonFile(path, data, message, env) {
+  const existing = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}?ref=main`, env.GITHUB_WRITE_TOKEN);
+  let sha;
+  if (existing.ok) {
+    const file = await existing.json();
+    sha = file.sha;
+  } else if (existing.status !== 404) {
+    return { ok: false, status: existing.status, error: (await safeGithubError(existing)) || `Could not read ${path}` };
+  }
+
+  const response = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}`, env.GITHUB_WRITE_TOKEN, {
+    method: 'PUT',
+    body: JSON.stringify({
+      message,
+      content: utf8ToBase64(`${JSON.stringify(data, null, 2)}\n`),
+      branch: 'main',
+      ...(sha ? { sha } : {}),
+    }),
+  });
+  if (!response.ok) return { ok: false, status: response.status, error: (await safeGithubError(response)) || `Could not update ${path}` };
+  return { ok: true };
+}
+
+function sanitiseSiteSettings(site) {
+  return {
+    site_name: cleanText(site.site_name || 'Sonomzy', 80) || 'Sonomzy',
+    tagline: cleanText(site.tagline || '', 180),
+    background: cleanHex(site.background, '#f5f1ed'),
+    surface: cleanHex(site.surface, '#fffdfb'),
+    text: cleanHex(site.text, '#181512'),
+    muted: cleanHex(site.muted, '#6d655e'),
+    accent: cleanHex(site.accent, '#2d4f73'),
+    border: cleanHex(site.border, '#e7dfd8'),
+    content_width: clampNumber(site.content_width, 800, 1600, 1120),
+    article_width: clampNumber(site.article_width, 560, 1100, 820),
+    radius: clampNumber(site.radius, 0, 40, 18),
+  };
+}
+
+function sanitiseNavigation(items) {
+  if (!Array.isArray(items)) return [];
+  return items.slice(0, 12).map((item) => ({
+    title: cleanText(item?.title || '', 40),
+    url: cleanNavUrl(item?.url || ''),
+  })).filter((item) => item.title && item.url);
+}
+
+function cleanNavUrl(value) {
+  const url = String(value || '').trim();
+  if (/^\/[A-Za-z0-9_\-./]*$/.test(url)) return url;
+  if (/^https:\/\/[A-Za-z0-9.-]+(?:\/[A-Za-z0-9_\-./?=&%#]*)?$/.test(url)) return url;
+  return '';
+}
+
 async function githubFetch(url, token, options = {}) {
   return fetch(url, {
     ...options,
@@ -230,11 +319,18 @@ function cleanSlug(value) { return String(value || '').toLowerCase().trim().repl
 function safeFileName(value) { const cleaned = String(value).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, ''); return cleaned.slice(-120) || 'image.png'; }
 function yamlString(value) { return JSON.stringify(String(value || '')); }
 function encodePath(path) { return path.split('/').map(encodeURIComponent).join('/'); }
+function cleanHex(value, fallback) { return /^#[0-9a-fA-F]{6}$/.test(String(value || '')) ? String(value) : fallback; }
+function clampNumber(value, min, max, fallback) { const number = Number(value); return Number.isFinite(number) ? Math.min(max, Math.max(min, Math.round(number))) : fallback; }
 function utf8ToBase64(value) {
   const bytes = encoder.encode(value);
   let binary = '';
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(binary);
+}
+function base64ToUtf8(value) {
+  const binary = atob(value);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return decoder.decode(bytes);
 }
 function parseCookies(header) {
   return Object.fromEntries(header.split(';').map(v => v.trim()).filter(Boolean).map(v => {
