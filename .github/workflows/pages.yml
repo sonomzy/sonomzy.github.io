@@ -48,22 +48,29 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Remove Vonge demo content. We keep the theme code, not its sample site.
           rm -rf vonge/site/collections/_posts/*
           rm -rf vonge/site/collections/_projects/*
           rm -rf vonge/site/collections/_testimonials/*
+          rm -f vonge/site/collections/_pages/elements.html
+          rm -rf vonge/site/images/*
 
+          # Apply Sonomzy's Vonge overrides.
           cp -R sonomzy/vonge-overrides/site/. vonge/site/
           cp -R sonomzy/vonge-overrides/component-library/. vonge/component-library/
 
+          # Keep posts created by the custom writer.
           if compgen -G "sonomzy/_posts/*" > /dev/null; then
             cp sonomzy/_posts/* vonge/site/collections/_posts/
           fi
 
+          # Keep post images uploaded by the writer.
           if [ -d sonomzy/assets/images ]; then
             mkdir -p vonge/site/assets/images
             cp -R sonomzy/assets/images/. vonge/site/assets/images/
           fi
 
+          # Translate the editable navigation JSON into Vonge's data shape.
           python3 sonomzy/vonge-overrides/build_navigation.py \
             sonomzy/_data/navigation.json \
             vonge/site/_data/navigation.yml
