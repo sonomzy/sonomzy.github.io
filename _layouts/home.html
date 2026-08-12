@@ -4,8 +4,8 @@ layout: default
 
 <div class="home-page">
   <section class="hero">
-    <p class="eyebrow">Onome Joseph • Sonomzy</p>
-    <h1>Developer, blogger, and digital creative.</h1>
+    <p class="eyebrow">Onome Joseph • {{ site.data.site.site_name | default: site.title }}</p>
+    <h1>{{ site.data.site.tagline | default: "Developer, blogger, and digital creative." }}</h1>
     <p class="hero-copy">This is my corner of the internet for build logs, development notes, experiments, and the things I’m figuring out as I go.</p>
     <div class="hero-actions">
       <a class="button primary" href="{{ '/archive/' | relative_url }}">Read posts</a>
@@ -32,7 +32,7 @@ layout: default
         {% endfor %}
       </div>
     {% else %}
-      <p class="home-empty">No posts yet. Publish your first one from Pages CMS and it will show up here.</p>
+      <p class="home-empty">No posts yet. Publish your first one and it will show up here.</p>
     {% endif %}
   </section>
 
