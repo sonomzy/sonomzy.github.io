@@ -1,0 +1,79 @@
+media:
+  input: assets/images
+  output: /assets/images
+  extensions: [png, jpg, jpeg, webp, gif]
+  rename: safe
+
+content:
+  - name: posts
+    label: Posts
+    type: collection
+    path: _posts
+    format: yaml-frontmatter
+    filename:
+      template: "{year}-{month}-{day}-{title}.md"
+      field: false
+    fields:
+      - name: layout
+        type: string
+        default: post
+        hidden: true
+      - name: title
+        label: Title
+        type: string
+        required: true
+      - name: date
+        label: Publish date
+        type: date
+        required: true
+        options:
+          time: false
+          format: yyyy-MM-dd
+      - name: description
+        label: Short description
+        type: text
+        required: false
+      - name: body
+        label: Content
+        type: rich-text
+        required: true
+    view:
+      fields: [title, date]
+      primary: title
+      sort: [date, title]
+      search: [title, description]
+      default:
+        sort: date
+        order: desc
+
+  - name: about
+    label: About page
+    type: file
+    path: about.markdown
+    format: yaml-frontmatter
+    fields:
+      - name: layout
+        type: string
+        default: page
+        hidden: true
+      - name: title
+        label: Title
+        type: string
+        required: true
+      - name: permalink
+        type: string
+        default: /about/
+        hidden: true
+      - name: body
+        label: Content
+        type: rich-text
+        required: true
+
+settings:
+  commit:
+    identity: user
+    templates:
+      create: "publish: add {filename}"
+      update: "publish: update {filename}"
+      delete: "publish: remove {filename}"
+      rename: "publish: rename {oldFilename} to {newFilename}"
