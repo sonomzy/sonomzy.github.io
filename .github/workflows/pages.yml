@@ -1,8 +1,8 @@
-name: Deploy Jekyll site to Pages
+name: Deploy Vonge site to Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "vonge-theme-migration"]
   workflow_dispatch:
 
 permissions:
@@ -18,21 +18,84 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Sonomzy
         uses: actions/checkout@v6
+        with:
+          path: sonomzy
+
+      - name: Checkout pinned Vonge theme
+        uses: actions/checkout@v6
+        with:
+          repository: CloudCannon/vonge-jekyll-bookshop-template
+          ref: 05e7bac5f4d2a298351abcbdfefe6d57f56f9382
+          path: vonge
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: vonge/package-lock.json
+
+      - name: Prepare Sonomzy content
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Remove all Vonge demo content so only Sonomzy content is published.
+          rm -rf vonge/site/collections/_posts/*
+          rm -rf vonge/site/collections/_projects/*
+          rm -rf vonge/site/collections/_testimonials/*
+
+          # Apply the Sonomzy-specific Vonge overrides.
+          cp -R sonomzy/vonge-overrides/site/. vonge/site/
+          cp -R sonomzy/vonge-overrides/component-library/. vonge/component-library/
+
+          # Keep posts created by the custom writer.
+          if compgen -G "sonomzy/_posts/*" > /dev/null; then
+            cp sonomzy/_posts/* vonge/site/collections/_posts/
+          fi
+
+          # Keep post images uploaded by the writer.
+          if [ -d sonomzy/assets/images ]; then
+            mkdir -p vonge/site/assets/images
+            cp -R sonomzy/assets/images/. vonge/site/assets/images/
+          fi
+
+          # Translate the editable Sonomzy navigation JSON into Vonge's data shape.
+          python3 sonomzy/vonge-overrides/build_navigation.py \
+            sonomzy/_data/navigation.json \
+            vonge/site/_data/navigation.yml
+
+      - name: Install Vonge dependencies
+        working-directory: vonge
+        run: |
+          npm ci
+          npm run jekyll:install
+
+      - name: Build Vonge
+        working-directory: vonge
+        run: npm run build
+
+      - name: Add Sonomzy admin and license notice
+        shell: bash
+        run: |
+          cp -R sonomzy/admin vonge/site/_site/admin
+          cp sonomzy/VONGE-LICENSE.txt vonge/site/_site/VONGE-LICENSE.txt
 
       - name: Setup Pages
-        id: pages
         uses: actions/configure-pages@v5
-
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
+        with:
+          path: vonge/site/_site
 
   deploy:
     environment:
@@ -40,6 +103,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
