@@ -48,27 +48,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Remove all Vonge demo content so only Sonomzy content is published.
           rm -rf vonge/site/collections/_posts/*
           rm -rf vonge/site/collections/_projects/*
           rm -rf vonge/site/collections/_testimonials/*
 
-          # Apply the Sonomzy-specific Vonge overrides.
           cp -R sonomzy/vonge-overrides/site/. vonge/site/
           cp -R sonomzy/vonge-overrides/component-library/. vonge/component-library/
 
-          # Keep posts created by the custom writer.
           if compgen -G "sonomzy/_posts/*" > /dev/null; then
             cp sonomzy/_posts/* vonge/site/collections/_posts/
           fi
 
-          # Keep post images uploaded by the writer.
           if [ -d sonomzy/assets/images ]; then
             mkdir -p vonge/site/assets/images
             cp -R sonomzy/assets/images/. vonge/site/assets/images/
           fi
 
-          # Translate the editable Sonomzy navigation JSON into Vonge's data shape.
           python3 sonomzy/vonge-overrides/build_navigation.py \
             sonomzy/_data/navigation.json \
             vonge/site/_data/navigation.yml
@@ -86,8 +81,8 @@ jobs:
       - name: Add Sonomzy admin and license notice
         shell: bash
         run: |
-          cp -R sonomzy/admin vonge/site/_site/admin
-          cp sonomzy/VONGE-LICENSE.txt vonge/site/_site/VONGE-LICENSE.txt
+          cp -R sonomzy/admin vonge/_site/admin
+          cp sonomzy/VONGE-LICENSE.txt vonge/_site/VONGE-LICENSE.txt
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -95,7 +90,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: vonge/site/_site
+          path: vonge/_site
 
   deploy:
     environment:
