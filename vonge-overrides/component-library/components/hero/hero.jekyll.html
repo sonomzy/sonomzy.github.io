@@ -1,0 +1,28 @@
+<!-- begin hero -->
+{% assign c = "c-hero" %}
+<section class="{{c}} animate">
+  <div class="container">
+    <div class="row">
+      <div class="col col-12">
+        <div class="{{c}}__inner">
+          <div class="{{c}}__left">
+            <h1 class="{{c}}__title">{{ include.title }}</h1>
+            <div class="{{c}}__description">{{ include.description_html }}</div>
+            <div class="{{c}}__btn">
+              <a href="{{ include.cta_button_link }}" class="cta-button c-button c-button--primary c-button--small">{{ include.cta_button }}</a>
+              <a class="works-button c-button c-button--secondary c-button--small" href="{{ include.works_button_link }}">
+                <span class="circle-bg"><ion-icon class="button-arrow" name="arrow-down-outline"></ion-icon></span> {{ include.works_button }}
+              </a>
+            </div>
+          </div>
+          <div class="{{c}}__right">
+            <div class="sonomzy-hero-mark" aria-hidden="true">
+              <span class="sonomzy-hero-code">&lt;/&gt;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- end hero -->
