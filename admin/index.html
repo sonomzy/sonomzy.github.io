@@ -6,9 +6,21 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Sonomzy Writer</title>
   <link rel="stylesheet" href="./editor.css">
+  <link rel="stylesheet" href="./auth.css">
 </head>
 <body>
-  <div class="app-shell">
+  <section id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <a class="auth-brand" href="/">Sonomzy</a>
+      <p class="auth-kicker">Private writer</p>
+      <h1>Write without the CMS clutter.</h1>
+      <p id="authMessage" class="auth-message">Sign in with the GitHub account that owns this site.</p>
+      <button id="loginButton" class="github-button" type="button">Sign in with GitHub</button>
+      <p class="auth-footnote">Only the authorized Sonomzy GitHub account can open the editor or publish.</p>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell" hidden>
     <header class="topbar">
       <a class="brand" href="/">Sonomzy</a>
       <div class="topbar-center">
@@ -17,6 +29,7 @@
       <div class="topbar-actions">
         <button id="previewButton" class="ghost-button" type="button">Preview</button>
         <button id="settingsButton" class="ghost-button" type="button" aria-expanded="false">Post settings</button>
+        <button id="logoutButton" class="ghost-button" type="button">Sign out</button>
         <button id="publishButton" class="primary-button" type="button">Publish</button>
       </div>
     </header>
@@ -47,7 +60,7 @@
       <button type="button" data-slash="quote"><span>“</span><div><b>Quote</b><small>Block quote</small></div></button>
       <button type="button" data-slash="code"><span>&lt;/&gt;</span><div><b>Code block</b><small>Preformatted code</small></div></button>
       <button type="button" data-slash="divider"><span>—</span><div><b>Divider</b><small>Horizontal rule</small></div></button>
-      <button type="button" data-slash="image"><span>▧</span><div><b>Image</b><small>Insert from your device</small></div></button>
+      <button type="button" data-slash="image"><span>▧</span><div><b>Image</b><small>Upload to Sonomzy</small></div></button>
     </div>
 
     <aside id="settingsPanel" class="settings-panel" aria-hidden="true">
@@ -71,7 +84,7 @@
         <input id="dateInput" type="date">
       </label>
       <div class="settings-note">
-        Drafts currently save to this browser. The secure GitHub publishing bridge is the next layer.
+        Drafts autosave in this browser. Published posts and uploaded images are committed to GitHub through the private Cloudflare Worker.
       </div>
     </aside>
     <div id="panelBackdrop" class="panel-backdrop" hidden></div>
@@ -90,7 +103,7 @@
       </div>
     </div>
 
-    <input id="imageInput" type="file" accept="image/*" hidden>
+    <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </div>
 
