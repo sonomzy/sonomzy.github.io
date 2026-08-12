@@ -43,24 +43,35 @@ function json(data, status, env, origin) {
 }
 
 async function startGithubAuth(request, env) {
-  assertSecrets(env);
+  assertAuthSecrets(env);
   const url = new URL(request.url);
   const state = crypto.randomUUID();
-  const stateToken = await seal({ state, exp: Date.now() + 10 * 60 * 1000 }, env.SESSION_SECRET);
+  const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challengeBytes = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(verifier)));
+  const challenge = base64url(challengeBytes);
+  const stateToken = await seal({ state, verifier, exp: Date.now() + 10 * 60 * 1000 }, env.SESSION_SECRET);
   const callback = `${url.origin}/auth/callback`;
+
   const github = new URL('https://github.com/login/oauth/authorize');
   github.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
   github.searchParams.set('redirect_uri', callback);
-  github.searchParams.set('scope', 'public_repo read:user');
+  github.searchParams.set('scope', 'read:user');
   github.searchParams.set('state', state);
+  github.searchParams.set('code_challenge', challenge);
+  github.searchParams.set('code_challenge_method', 'S256');
   github.searchParams.set('allow_signup', 'false');
-  const response = Response.redirect(github.toString(), 302);
-  response.headers.append('Set-Cookie', `sonomzy_oauth_state=${stateToken}; Path=/auth/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
-  return response;
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': github.toString(),
+      'Set-Cookie': `sonomzy_oauth_state=${stateToken}; Path=/auth/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
+    },
+  });
 }
 
 async function finishGithubAuth(request, env) {
-  assertSecrets(env);
+  assertAuthSecrets(env);
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -86,6 +97,7 @@ async function finishGithubAuth(request, env) {
       client_secret: env.GITHUB_CLIENT_SECRET,
       code,
       redirect_uri: `${url.origin}/auth/callback`,
+      code_verifier: statePayload.verifier,
     }),
   });
   const tokenData = await tokenResponse.json();
@@ -96,24 +108,23 @@ async function finishGithubAuth(request, env) {
   if (!userResponse.ok) return redirectWithError(env, 'Could not verify your GitHub account.');
   if (String(user.id) !== String(env.ALLOWED_GITHUB_ID)) return redirectWithError(env, 'This GitHub account is not allowed to use the Sonomzy writer.');
 
-  const session = await seal({
-    token: tokenData.access_token,
-    login: user.login,
-    id: user.id,
-    exp: Date.now() + 12 * 60 * 60 * 1000,
-  }, env.SESSION_SECRET);
-
+  const session = await seal({ login: user.login, id: user.id, exp: Date.now() + 12 * 60 * 60 * 1000 }, env.SESSION_SECRET);
   const admin = new URL(env.ADMIN_URL);
   admin.hash = `session=${encodeURIComponent(session)}`;
-  const response = Response.redirect(admin.toString(), 302);
-  response.headers.append('Set-Cookie', 'sonomzy_oauth_state=; Path=/auth/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
-  return response;
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': admin.toString(),
+      'Set-Cookie': 'sonomzy_oauth_state=; Path=/auth/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
+    },
+  });
 }
 
 function redirectWithError(env, message) {
   const admin = new URL(env.ADMIN_URL);
   admin.hash = `error=${encodeURIComponent(message)}`;
-  return Response.redirect(admin.toString(), 302);
+  return new Response(null, { status: 302, headers: { 'Location': admin.toString() } });
 }
 
 async function requireSession(request, env, handler) {
@@ -130,7 +141,8 @@ async function requireSession(request, env, handler) {
   }
 }
 
-async function publishPost(request, env, origin, session) {
+async function publishPost(request, env, origin) {
+  assertPublishSecret(env);
   const body = await request.json();
   const title = cleanText(body.title, 180);
   const description = cleanText(body.description || '', 300);
@@ -140,10 +152,10 @@ async function publishPost(request, env, origin, session) {
   if (!title) return json({ error: 'Title is required.' }, 400, env, origin);
   if (!slug) return json({ error: 'A valid slug is required.' }, 400, env, origin);
   if (!html || html === '<p></p>') return json({ error: 'Write something before publishing.' }, 400, env, origin);
-  if (html.length > 900000) return json({ error: 'This post is too large. Upload large images instead of embedding them.' }, 413, env, origin);
+  if (html.length > 900000) return json({ error: 'This post is too large.' }, 413, env, origin);
 
   const path = `_posts/${date}-${slug}.html`;
-  const frontMatter = [
+  const content = [
     '---',
     'layout: post',
     `title: ${yamlString(title)}`,
@@ -151,36 +163,26 @@ async function publishPost(request, env, origin, session) {
     `description: ${yamlString(description)}`,
     '---',
     '',
+    html,
+    '',
   ].join('\n');
-  const content = `${frontMatter}${html}\n`;
 
-  const existing = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}?ref=main`, session.token);
+  const existing = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}?ref=main`, env.GITHUB_WRITE_TOKEN);
   if (existing.status === 200) return json({ error: 'A post with this date and slug already exists. Change the slug or date.' }, 409, env, origin);
-  if (existing.status !== 404) {
-    const detail = await safeGithubError(existing);
-    return json({ error: detail || 'Could not check the destination post.' }, 502, env, origin);
-  }
+  if (existing.status !== 404) return json({ error: (await safeGithubError(existing)) || 'Could not check the destination post.' }, 502, env, origin);
 
-  const create = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}`, session.token, {
+  const create = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}`, env.GITHUB_WRITE_TOKEN, {
     method: 'PUT',
-    body: JSON.stringify({
-      message: `Publish: ${title}`,
-      content: utf8ToBase64(content),
-      branch: 'main',
-    }),
+    body: JSON.stringify({ message: `Publish: ${title}`, content: utf8ToBase64(content), branch: 'main' }),
   });
   const result = await create.json();
   if (!create.ok) return json({ error: result.message || 'GitHub rejected the publish request.' }, create.status, env, origin);
 
-  return json({
-    ok: true,
-    path,
-    commit: result.commit?.sha || null,
-    url: `https://${env.GITHUB_OWNER}.github.io/${slug}/`,
-  }, 200, env, origin);
+  return json({ ok: true, path, commit: result.commit?.sha || null, url: `https://${env.GITHUB_OWNER}.github.io/${slug}/` }, 200, env, origin);
 }
 
-async function uploadImage(request, env, origin, session) {
+async function uploadImage(request, env, origin) {
+  assertPublishSecret(env);
   const body = await request.json();
   const name = safeFileName(body.name || 'image');
   const dataUrl = typeof body.dataUrl === 'string' ? body.dataUrl : '';
@@ -191,13 +193,9 @@ async function uploadImage(request, env, origin, session) {
   const month = new Date().toISOString().slice(0, 7);
   const unique = `${Date.now()}-${name}`;
   const path = `assets/images/posts/${month}/${unique}`;
-  const create = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}`, session.token, {
+  const create = await githubFetch(`https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/contents/${encodePath(path)}`, env.GITHUB_WRITE_TOKEN, {
     method: 'PUT',
-    body: JSON.stringify({
-      message: `Upload post image: ${unique}`,
-      content: match[2],
-      branch: 'main',
-    }),
+    body: JSON.stringify({ message: `Upload post image: ${unique}`, content: match[2], branch: 'main' }),
   });
   const result = await create.json();
   if (!create.ok) return json({ error: result.message || 'Could not upload the image.' }, create.status, env, origin);
@@ -220,27 +218,16 @@ async function githubFetch(url, token, options = {}) {
 async function safeGithubError(response) {
   try { const data = await response.json(); return data.message || ''; } catch { return ''; }
 }
-
-function assertSecrets(env) {
-  for (const name of ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'SESSION_SECRET']) {
-    if (!env[name]) throw new Error(`Missing Worker secret: ${name}`);
-  }
+function assertAuthSecrets(env) {
+  for (const name of ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'SESSION_SECRET']) if (!env[name]) throw new Error(`Missing Worker secret: ${name}`);
 }
-
-function cleanText(value, max) {
-  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+function assertPublishSecret(env) {
+  if (!env.GITHUB_WRITE_TOKEN) throw new Error('Missing Worker secret: GITHUB_WRITE_TOKEN');
 }
-function cleanDate(value) {
-  const v = String(value || '');
-  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : new Date().toISOString().slice(0, 10);
-}
-function cleanSlug(value) {
-  return String(value || '').toLowerCase().trim().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90);
-}
-function safeFileName(value) {
-  const cleaned = String(value).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
-  return cleaned.slice(-120) || 'image.png';
-}
+function cleanText(value, max) { return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max); }
+function cleanDate(value) { const v = String(value || ''); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : new Date().toISOString().slice(0, 10); }
+function cleanSlug(value) { return String(value || '').toLowerCase().trim().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90); }
+function safeFileName(value) { const cleaned = String(value).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, ''); return cleaned.slice(-120) || 'image.png'; }
 function yamlString(value) { return JSON.stringify(String(value || '')); }
 function encodePath(path) { return path.split('/').map(encodeURIComponent).join('/'); }
 function utf8ToBase64(value) {
@@ -255,15 +242,12 @@ function parseCookies(header) {
     return [v.slice(0, i), v.slice(i + 1)];
   }));
 }
-
 async function seal(payload, secret) {
   const key = await sessionKey(secret);
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = encoder.encode(JSON.stringify(payload));
-  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(JSON.stringify(payload))));
   return `${base64url(iv)}.${base64url(encrypted)}`;
 }
-
 async function unseal(token, secret) {
   const [ivPart, dataPart] = String(token).split('.');
   if (!ivPart || !dataPart) throw new Error('Invalid session');
@@ -271,7 +255,6 @@ async function unseal(token, secret) {
   const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64url(ivPart) }, key, fromBase64url(dataPart));
   return JSON.parse(decoder.decode(decrypted));
 }
-
 async function sessionKey(secret) {
   const digest = await crypto.subtle.digest('SHA-256', encoder.encode(secret));
   return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt']);
