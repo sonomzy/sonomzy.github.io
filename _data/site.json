@@ -1,0 +1,13 @@
+{
+  "site_name": "Sonomzy",
+  "tagline": "Developer, blogger, and digital creative.",
+  "background": "#f5f1ed",
+  "surface": "#fffdfb",
+  "text": "#181512",
+  "muted": "#6d655e",
+  "accent": "#2d4f73",
+  "border": "#e7dfd8",
+  "content_width": 1120,
+  "article_width": 820,
+  "radius": 18
+}

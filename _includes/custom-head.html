@@ -1,1 +1,14 @@
 <link rel="stylesheet" href="{{ '/assets/css/sonomzy.css' | relative_url }}">
+<style>
+  :root {
+    --bg: {{ site.data.site.background | default: '#f5f1ed' }};
+    --surface: {{ site.data.site.surface | default: '#fffdfb' }};
+    --text: {{ site.data.site.text | default: '#181512' }};
+    --muted: {{ site.data.site.muted | default: '#6d655e' }};
+    --accent: {{ site.data.site.accent | default: '#2d4f73' }};
+    --border: {{ site.data.site.border | default: '#e7dfd8' }};
+    --radius: {{ site.data.site.radius | default: 18 }}px;
+    --max: {{ site.data.site.content_width | default: 1120 }}px;
+    --article-max: {{ site.data.site.article_width | default: 820 }}px;
+  }
+</style>
